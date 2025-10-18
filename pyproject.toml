@@ -1,0 +1,24 @@
+[project]
+name = "todo-project"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "argon2-cffi>=25.1.0",
+    "fastapi>=0.119.0",
+    "gunicorn>=23.0.0",
+    "passlib[bcrypt]>=1.7.4",
+    "pydantic-settings>=2.11.0",
+    "pydantic[email]>=2.12.2",
+    "pyjwt>=2.10.1",
+    "pymongo>=4.15.3",
+    "uvicorn[standard]>=0.37.0",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.9.0",
+    "mypy>=1.18.2",
+    "ruff>=0.13.2",
+]
