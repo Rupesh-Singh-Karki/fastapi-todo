@@ -8,7 +8,8 @@ JWT_SECRET = settings.jwt_secret_key
 JWT_ALGORITHM = settings.jwt_algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.jwt_access_token_expire_minutes
 
-BLACKLIST = set()
+# Remove the in-memory BLACKLIST
+# BLACKLIST = set()  # OLD - don't use this anymore
 
 
 def _make_jti() -> str:
@@ -42,10 +43,26 @@ def decode_token(token: str) -> Dict[str, Any]:
     """
     payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     jti = payload.get("jti")
-    if jti in BLACKLIST:
+
+    # NEW: Check Redis blacklist instead of in-memory set
+    if redis_client.exists(f"blacklist:{jti}"):
         raise jwt.InvalidTokenError("Token revoked")
+
     return payload
 
 
-def revoke_jti(jti: str) -> None:
-    BLACKLIST.add(jti)
+def revoke_jti(jti: str, exp: int) -> None:
+    """
+    Add a JTI to the blacklist in Redis.
+    
+    Args:
+        jti: Token ID to revoke
+        exp: Token expiration timestamp (to set TTL)
+    """
+    # Calculate remaining time until expiry
+    now = int(datetime.utcnow().timestamp())
+    ttl = exp - now
+    
+    if ttl > 0:
+        # Store in Redis with TTL matching token expiry
+        redis_client.setex(f"blacklist:{jti}", ttl, "revoked")
