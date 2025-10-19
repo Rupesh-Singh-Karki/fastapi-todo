@@ -20,6 +20,14 @@ class Settings(BaseSettings):
     jwt_secret_key: str = Field(...,env="JWT_SECRET_KEY")
     jwt_algorithm: str = Field("HS256", env="JWT_ALGORITHM")
     jwt_access_token_expire_minutes: int = Field(30,env="JWT_ACCESS_TOKEN_EXPIRE_MINUTES")
+    #email
+    email_sender: str = Field(..., env="EMAIL_SENDER")
+    email_password: str = Field(..., env="EMAIL_PASSWORD")
+    smtp_host: str = Field("smtp.gmail.com", env="SMTP_HOST")
+    smtp_port: int = Field(587, env="SMTP_PORT")
+    email_enabled: bool = Field(True, env="EMAIL_ENABLED")
+    #redis
+    redis_url: str = Field("redis://localhost:6379/0", env="REDIS_URL")
 
 
 settings = Settings()

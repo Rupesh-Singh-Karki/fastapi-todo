@@ -1,11 +1,12 @@
 from fastapi import HTTPException, status
 from datetime import datetime
+from typing import Optional
 from bson import ObjectId
 from src.utils.db import db
 
 todo_collection = db["todos"]
 
-def create_todo_service(user_id: str, heading: str, task: str):
+def create_todo_service(user_id: str, heading: str, task: str, completion_time: Optional[datetime] = None):
     now = datetime.utcnow()
     new_todo = {
         "user_id": ObjectId(user_id),
@@ -13,7 +14,9 @@ def create_todo_service(user_id: str, heading: str, task: str):
         "task": task,
         "completed": False,
         "created_at": now,
-        "updated_at": now
+        "updated_at": now,
+        "completion_time": completion_time,
+        "reminder_sent": False
     }
     result = todo_collection.insert_one(new_todo)
     new_todo["_id"] = result.inserted_id
@@ -23,7 +26,9 @@ def create_todo_service(user_id: str, heading: str, task: str):
         "task": new_todo["task"],
         "completed": new_todo["completed"],
         "created_at": new_todo["created_at"].isoformat(),
-        "updated_at": new_todo["updated_at"].isoformat()
+        "updated_at": new_todo["updated_at"].isoformat(),
+        "completion_time": new_todo["completion_time"].isoformat() if new_todo["completion_time"] else None,
+        "reminder_sent": new_todo["reminder_sent"]
     }
 
 def get_all_todos_service(user_id: str):
@@ -36,7 +41,9 @@ def get_all_todos_service(user_id: str):
             "task": t["task"],
             "completed": t["completed"],
             "created_at": t["created_at"].isoformat() if isinstance(t["created_at"], datetime) else t["created_at"],
-            "updated_at": t["updated_at"].isoformat() if isinstance(t["updated_at"], datetime) else t["updated_at"]
+            "updated_at": t["updated_at"].isoformat() if isinstance(t["updated_at"], datetime) else t["updated_at"],
+            "completion_time": t["completion_time"].isoformat() if t.get("completion_time") else None,
+            "reminder_sent": t.get("reminder_sent", False)
         })
     return result
 
@@ -53,12 +60,17 @@ def get_todo_service(user_id: str, todo_id: str):
         "task": todo["task"],
         "completed": todo["completed"],
         "created_at": todo["created_at"].isoformat() if isinstance(todo["created_at"], datetime) else todo["created_at"],
-        "updated_at": todo["updated_at"].isoformat() if isinstance(todo["updated_at"], datetime) else todo["updated_at"]
+        "updated_at": todo["updated_at"].isoformat() if isinstance(todo["updated_at"], datetime) else todo["updated_at"],
+        "completion_time": todo["completion_time"].isoformat() if todo.get("completion_time") else None,
+        "reminder_sent": todo.get("reminder_sent", False)
     }
 
 def update_todo_service(user_id: str, todo_id: str, data: dict):
     if not data:
         raise HTTPException(status_code=400, detail="No fields to update")
+
+    if data.get("completed") == True:
+        data["reminder_sent"] = True #prevent future reminders
     
     result = todo_collection.update_one(
         {"_id": ObjectId(todo_id), "user_id": ObjectId(user_id)},
@@ -69,7 +81,7 @@ def update_todo_service(user_id: str, todo_id: str, data: dict):
     return {"msg": "Todo updated successfully"}
 
 def delete_todo_service(user_id: str, todo_id: str):
-    result = todo_collection.delete_one({"_id": ObjectId(todo_id), "user_id": user_id})
+    result = todo_collection.delete_one({"_id": ObjectId(todo_id), "user_id": ObjectId(user_id)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Todo not found or not authorized")
     return {"msg": "Todo deleted successfully"}

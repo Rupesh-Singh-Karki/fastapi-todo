@@ -7,6 +7,7 @@ from src.config import settings
 from src.utils.logger import logger
 from src.auth.routes.auth import router as auth_router
 from src.todo.routes.todo import router as todo_router
+from src.utils.reminder_scheduler import start_reminder_scheduler
 
 
 description = """
@@ -35,6 +36,18 @@ app.add_middleware(
 @app.get("/", tags=["Health"])
 async def health_check() -> Dict[str, str]:
     return {"status": "ok", "message": "Todo API is running"}
+
+# NEW: Start reminder scheduler on app startup
+@app.on_event("startup")
+async def startup_event():
+    log.info("Starting Todo API...")
+    start_reminder_scheduler()
+    log.info("Reminder scheduler initialized")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    log.info("Shutting down Todo API...")
 
 app.include_router(auth_router)
 app.include_router(todo_router)
